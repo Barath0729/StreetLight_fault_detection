@@ -1,0 +1,70 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ThingSpeak.h>
+
+const char* ssid = "Nishanth";
+const char* password = "12345670";
+
+const unsigned long channelID = 2428732;
+const char* apiKey = "9NNL47LB8T006YYU";
+
+const int LDR_PIN = A0;
+const int TILT_SENSOR_PIN = D7; // Assuming the tilt sensor is connected to pin D7
+const int VOLTAGE_SENSOR_PIN = D2;
+
+WiFiClient client;
+ESP8266WebServer webServer(80);
+
+void updateThingSpeak(int field1, int field2, float field3);
+
+void setup() {
+  Serial.begin(115200);
+  
+  pinMode(LDR_PIN, INPUT);
+  pinMode(TILT_SENSOR_PIN, INPUT); // Set pin mode for the tilt sensor
+  pinMode(VOLTAGE_SENSOR_PIN, INPUT);
+
+  WiFi.begin(ssid, password);
+  Serial.println("\nConnecting to WiFi...");
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected.");
+
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  int ldrValue = analogRead(LDR_PIN);
+  int tiltSensorValue = digitalRead(TILT_SENSOR_PIN); // Read tilt sensor value
+  float voltageValue = analogRead(VOLTAGE_SENSOR_PIN) * (3.3 / 1024.0);
+  
+  updateThingSpeak(ldrValue, tiltSensorValue, voltageValue);
+
+  delay(20000); // Update every 20 seconds
+}
+
+void updateThingSpeak(int field1, int field2, float field3) {
+  ThingSpeak.begin(client);
+  
+  int writeSuccess1 = ThingSpeak.writeField(channelID, 1, field1, apiKey);
+  int writeSuccess2 = ThingSpeak.writeField(channelID, 2, field2, apiKey);
+  int writeSuccess3 = ThingSpeak.writeField(channelID, 3, field3, apiKey);
+
+  Serial.print("Field 1 (LDR): ");
+  Serial.println(field1);
+  Serial.print("Field 2 (Tilt Sensor): ");
+  Serial.println(field2);
+  Serial.print("Field 3 (Voltage): ");
+  Serial.println(field3);
+
+  if (writeSuccess1 && writeSuccess2 && writeSuccess3) {
+    Serial.println("ThingSpeak update successful.");
+  } else {
+    Serial.println("ThingSpeak update failed.");
+  }
+}
